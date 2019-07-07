@@ -2,6 +2,7 @@
 package main
 
 import (
+	"compress/gzip"
 	"strings"
 	"io/ioutil"
 	"bytes"
@@ -15,10 +16,10 @@ import (
 
 var (
   config =
-  `{"architecture":
-    "amd64",
+  `{
+    "architecture": "amd64",
     "config": {
-      "Hostname":"4cf915974228",
+      "Hostname":"aaa",
       "Domainname":"",
       "User":"",
       "AttachStdin":false,
@@ -28,18 +29,18 @@ var (
       "OpenStdin":false,
       "StdinOnce":false,
       "Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],
-      "Cmd":["/test.txt aa"],
+      "Cmd":["/hello"],
       "ArgsEscaped":true,
-      "Image":"sha256:622277a953205d23e0d8369cc4dc50f3b2d1e83250c8845b6946030a02e59e86",
+      "xImage":"sha256:%s",
       "Volumes":null,
       "WorkingDir":"",
       "Entrypoint":null,
       "OnBuild":null,
       "Labels":{}
     },
-    "container":"de98817e7be1ca20c5b3c10fa62d331e5ef723788f7adf17adc50ff14192de99",
+    "container":"zzz",
     "container_config":{
-      "Hostname":"4cf915974228",
+      "Hostname":"aaa",
       "Domainname":"",
       "User":"",
       "AttachStdin":false,
@@ -49,9 +50,9 @@ var (
       "OpenStdin":false,
       "StdinOnce":false,
       "Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],
-      "Cmd":["/bin/sh","-c","#(nop) ", "CMD [\"/test.txt aa\"]"],
+      "Cmd":["/bin/sh","-c","#(nop) ", "CMD [\"/hello\"]"],
       "ArgsEscaped":true,
-      "Image":"sha256:622277a953205d23e0d8369cc4dc50f3b2d1e83250c8845b6946030a02e59e86",
+      "xImage":"sha256:%s",
       "Volumes":null,
       "WorkingDir":"",
       "Entrypoint":null,
@@ -164,7 +165,7 @@ func uploadManifest(url string, manifest string) {
 }
 
 func createConfigBlob(imagehash string) []byte {
-  c := fmt.Sprintf(config, imagehash)
+  c := fmt.Sprintf(config, imagehash, imagehash, imagehash)
   return []byte(c)
 }
 
@@ -173,13 +174,26 @@ func createmanifest(imagehash string, confighash string) string {
   return c
 }
 
+func gzipBlob(in []byte) []byte {
+  var buf bytes.Buffer
+  w := gzip.NewWriter(&buf)
+  w.Write(in)
+  w.Close()
+  return buf.Bytes()
+}
+
 func main() {
+
+  repo_url := "http://192.168.1.51:5000"
+  image_name := "i1"
+  image_tag := "v1"
+
   tar := readFile("image.tar")
-  targz := readFile("image.tar.gz")
-  pushBlob("http://192.168.1.51:5000/v2/abc", targz)
+  targz := gzipBlob(tar)
+  pushBlob(repo_url + "/v2/"+image_name, targz)
   cfg := createConfigBlob(hash_data(tar))
-  pushBlob("http://192.168.1.51:5000/v2/abc", cfg)
+  pushBlob(repo_url + "/v2/"+image_name, cfg)
 
   man := createmanifest(hash_data(targz), hash_data(cfg))
-  uploadManifest("http://192.168.1.51:5000/v2/abc/manifests/latest", man)
+  uploadManifest(repo_url + "/v2/"+image_name+"/manifests/"+image_tag, man)
 }
