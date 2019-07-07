@@ -33,37 +33,20 @@ var (
       "ArgsEscaped":true,
       "xImage":"sha256:%s",
       "Volumes":null,
-      "WorkingDir":"",
+      "WorkingDir":"/",
       "Entrypoint":null,
       "OnBuild":null,
       "Labels":{}
     },
     "container":"zzz",
     "container_config":{
-      "Hostname":"aaa",
-      "Domainname":"",
-      "User":"",
-      "AttachStdin":false,
-      "AttachStdout":false,
-      "AttachStderr":false,
-      "Tty":false,
-      "OpenStdin":false,
-      "StdinOnce":false,
-      "Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],
-      "Cmd":["/bin/sh","-c","#(nop) ", "CMD [\"/hello\"]"],
-      "ArgsEscaped":true,
-      "xImage":"sha256:%s",
-      "Volumes":null,
-      "WorkingDir":"",
-      "Entrypoint":null,
-      "OnBuild":null,
-      "Labels":{}
+      "xImage":"sha256:%s"
     },
     "created":"2019-07-07T10:06:56.611368294Z",
     "docker_version":"1.13.1",
     "history":[
-      {"created":"2019-07-07T10:06:56.523525096Z","created_by":"/bin/sh -c #(nop) COPY file:f1726a17794eca97272e61c96b1518114dc8165b0a8ff15c80e242af38b68ebd in / "},
-      {"created":"2019-07-07T10:06:56.611368294Z","created_by":"/bin/sh -c #(nop)  CMD [\"/test.txt aa\"]","empty_layer":true}
+      {"created":"2019-07-07T10:06:56.523525096Z","created_by":"/bin/sh"},
+      {"created":"2019-07-07T10:06:56.611368294Z","created_by":"/bin/sh", "empty_layer":true}
     ],
     "os":
     "linux",
@@ -186,7 +169,7 @@ func main() {
 
   repo_url := "http://192.168.1.51:5000"
   image_name := "i1"
-  image_tag := "v1"
+  image_tag := "v3"
 
   tar := readFile("image.tar")
   targz := gzipBlob(tar)
