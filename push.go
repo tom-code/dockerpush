@@ -2,6 +2,7 @@
 package main
 
 import (
+	"encoding/json"
   "flag"
   "compress/gzip"
   "strings"
@@ -38,7 +39,7 @@ var (
       "OnBuild":null,
       "Labels":{}
     },
-    "container":"zzz",
+    "container": "zzz",
     "container_config":{
     },
     "created":"2019-07-07T10:06:56.611368294Z",
@@ -47,32 +48,12 @@ var (
       {"created":"2019-07-07T10:06:56.523525096Z","created_by":"/bin/sh"},
       {"created":"2019-07-07T10:06:56.611368294Z","created_by":"/bin/sh", "empty_layer":true}
     ],
-    "os":
-    "linux",
-    "rootfs":{
+    "os": "linux",
+    "rootfs": {
       "type": "layers",
-      "diff_ids":["sha256:%s"]
+      "diff_ids":[%s]
     }
   }`
-
-  manifestTemplate = `
-  {
-    "schemaVersion": 2,
-    "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
-    "config": {
-       "mediaType": "application/vnd.docker.container.image.v1+json",
-       "size": 1534,
-       "digest": "sha256:%s"
-    },
-    "layers": [
-       {
-          "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
-          "size": 110,
-          "digest": "sha256:%s"
-       }
-    ]
- }
-  `
 )
 
 func hash_file(fname string) string {
@@ -114,7 +95,6 @@ func pushBlob(url string, blob []byte) {
     panic("err")
   }
   location := resp.Header.Get("location")
-  fmt.Println("location "+location)
 
   put, err := http.NewRequest(http.MethodPut,
                               location+"&digest=sha256:"+hash_data(blob),
@@ -128,7 +108,10 @@ func pushBlob(url string, blob []byte) {
   if err != nil {
     panic(err)
   }
-  fmt.Println(resp)
+  if resp.StatusCode != 201 {
+    fmt.Println(resp)
+    panic("unexpected response")
+  }
 }
 
 func uploadManifest(url string, manifest string) {
@@ -143,17 +126,44 @@ func uploadManifest(url string, manifest string) {
   if err != nil {
     panic(err)
   }
-  fmt.Println(resp)
+  if resp.StatusCode != 201 {
+    fmt.Println(resp)
+    panic("unexpected response")
+  }
 }
 
-func createConfigBlob(imagehash string) []byte {
-  c := fmt.Sprintf(configTemplate, imagehash)
+func createConfigBlob(imagehash []string) []byte {
+  first := true
+  tmp := ""
+  for _, hash := range imagehash {
+    if first {
+      first = false
+    } else {
+      tmp = tmp + ","
+    }
+    tmp = tmp + "\"sha256:"+hash+"\""
+  }
+  c := fmt.Sprintf(configTemplate, tmp)
   return []byte(c)
 }
 
-func createmanifest(imagehash string, confighash string) string {
-  c := fmt.Sprintf(manifestTemplate, confighash, imagehash)
-  return c
+func createmanifest(imagehash []string, confighash string) string {
+  manifest := Manifest {
+    SchemaVersion: 2,
+    MediaType: "application/vnd.docker.distribution.manifest.v2+json",
+    Config : Content {
+      MediaType: "application/vnd.docker.container.image.v1+json",
+      Digest: "sha256:" + confighash,
+    },
+    Layers : []Content {
+    },
+  }
+  for _, image := range imagehash {
+    c := Content{MediaType: "application/vnd.docker.image.rootfs.diff.tar.gzip", Digest: "sha256:" + image}
+    manifest.Layers = append(manifest.Layers, c)
+  }
+  m, _ := json.Marshal(manifest)
+  return string(m)
 }
 
 func gzipBlob(in []byte) []byte {
@@ -169,6 +179,7 @@ func main() {
   imageNamePtr := flag.String("image", "image1", "name of image")
   imageTagPtr  := flag.String("tag", "v1", "tag")
   tarNamePtr   := flag.String("tar", "image.tar", "tar with image content")
+  tar2NamePtr   := flag.String("tar2", "", "second tar with image content")
 
   flag.Parse()
 
@@ -178,10 +189,25 @@ func main() {
 
   tar := readFile(*tarNamePtr)
   targz := gzipBlob(tar)
+
+  imagehashes := []string {hash_data(tar)}
+  imagegzhashes := []string {hash_data(targz)}
+
   pushBlob(repo_url + "/v2/"+image_name, targz)
-  cfg := createConfigBlob(hash_data(tar))
+
+  if len(*tar2NamePtr) > 0 {
+    tar2 := readFile(*tar2NamePtr)
+    targz2 := gzipBlob(tar2)
+    pushBlob(repo_url + "/v2/"+image_name, targz2)
+    imagehashes = append(imagehashes, hash_data(tar2))
+    imagegzhashes = append(imagegzhashes, hash_data(targz2))
+  }
+
+  cfg := createConfigBlob(imagehashes)
   pushBlob(repo_url + "/v2/"+image_name, cfg)
 
-  man := createmanifest(hash_data(targz), hash_data(cfg))
+  man := createmanifest(imagegzhashes, hash_data(cfg))
   uploadManifest(repo_url + "/v2/"+image_name+"/manifests/"+image_tag, man)
+
+  fmt.Println("everything seems ok")
 }
