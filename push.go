@@ -15,7 +15,7 @@ import (
 )
 
 var (
-  config =
+  configTemplate =
   `{
     "architecture": "amd64",
     "config": {
@@ -29,18 +29,16 @@ var (
       "OpenStdin":false,
       "StdinOnce":false,
       "Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],
-      "Cmd":["/hello"],
+      "Cmd":[],
       "ArgsEscaped":true,
-      "xImage":"sha256:%s",
       "Volumes":null,
       "WorkingDir":"/",
-      "Entrypoint":null,
+      "Entrypoint":["/hello"],
       "OnBuild":null,
       "Labels":{}
     },
     "container":"zzz",
     "container_config":{
-      "xImage":"sha256:%s"
     },
     "created":"2019-07-07T10:06:56.611368294Z",
     "docker_version":"1.13.1",
@@ -56,7 +54,7 @@ var (
     }
   }`
 
-  manifest = `
+  manifestTemplate = `
   {
     "schemaVersion": 2,
     "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
@@ -148,12 +146,12 @@ func uploadManifest(url string, manifest string) {
 }
 
 func createConfigBlob(imagehash string) []byte {
-  c := fmt.Sprintf(config, imagehash, imagehash, imagehash)
+  c := fmt.Sprintf(configTemplate, imagehash)
   return []byte(c)
 }
 
 func createmanifest(imagehash string, confighash string) string {
-  c := fmt.Sprintf(manifest, confighash, imagehash)
+  c := fmt.Sprintf(manifestTemplate, confighash, imagehash)
   return c
 }
 
