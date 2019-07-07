@@ -2,6 +2,7 @@
 package main
 
 import (
+	"flag"
 	"compress/gzip"
 	"strings"
 	"io/ioutil"
@@ -164,12 +165,18 @@ func gzipBlob(in []byte) []byte {
 }
 
 func main() {
+  repoUrlPtr   := flag.String("repo", "http://192.168.1.51:5000", "url of private repo")
+  imageNamePtr := flag.String("image", "image1", "name of image")
+  imageTagPtr  := flag.String("tag", "v1", "tag")
+  tarNamePtr   := flag.String("tar", "image.tar", "tar with image content")
 
-  repo_url := "http://192.168.1.51:5000"
-  image_name := "i1"
-  image_tag := "v3"
+  flag.Parse()
 
-  tar := readFile("image.tar")
+  repo_url := *repoUrlPtr
+  image_name := *imageNamePtr
+  image_tag := *imageTagPtr
+
+  tar := readFile(*tarNamePtr)
   targz := gzipBlob(tar)
   pushBlob(repo_url + "/v2/"+image_name, targz)
   cfg := createConfigBlob(hash_data(tar))
