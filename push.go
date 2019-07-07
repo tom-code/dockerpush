@@ -2,17 +2,17 @@
 package main
 
 import (
-	"flag"
-	"compress/gzip"
-	"strings"
-	"io/ioutil"
-	"bytes"
-	"fmt"
-	"net/http"
-	"encoding/hex"
-	"io"
-	"crypto/sha256"
-	"os"
+  "flag"
+  "compress/gzip"
+  "strings"
+  "io/ioutil"
+  "bytes"
+  "fmt"
+  "net/http"
+  "encoding/hex"
+  "io"
+  "crypto/sha256"
+  "os"
 )
 
 var (
