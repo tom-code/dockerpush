@@ -2,6 +2,7 @@
 package main
 
 import (
+	"time"
 	"encoding/json"
   "flag"
   "compress/gzip"
@@ -16,45 +17,6 @@ import (
   "os"
 )
 
-var (
-  configTemplate =
-  `{
-    "architecture": "amd64",
-    "config": {
-      "Hostname":"aaa",
-      "Domainname":"",
-      "User":"",
-      "AttachStdin":false,
-      "AttachStdout":false,
-      "AttachStderr":false,
-      "Tty":false,
-      "OpenStdin":false,
-      "StdinOnce":false,
-      "Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],
-      "Cmd":[],
-      "ArgsEscaped":true,
-      "Volumes":null,
-      "WorkingDir":"/",
-      "Entrypoint":["/hello"],
-      "OnBuild":null,
-      "Labels":{}
-    },
-    "container": "zzz",
-    "container_config":{
-    },
-    "created":"2019-07-07T10:06:56.611368294Z",
-    "docker_version":"1.13.1",
-    "history":[
-      {"created":"2019-07-07T10:06:56.523525096Z","created_by":"/bin/sh"},
-      {"created":"2019-07-07T10:06:56.611368294Z","created_by":"/bin/sh", "empty_layer":true}
-    ],
-    "os": "linux",
-    "rootfs": {
-      "type": "layers",
-      "diff_ids":[%s]
-    }
-  }`
-)
 
 func hash_file(fname string) string {
   file, err := os.Open(fname)
@@ -132,19 +94,29 @@ func uploadManifest(url string, manifest string) {
   }
 }
 
+
 func createConfigBlob(imagehash []string) []byte {
-  first := true
-  tmp := ""
-  for _, hash := range imagehash {
-    if first {
-      first = false
-    } else {
-      tmp = tmp + ","
-    }
-    tmp = tmp + "\"sha256:"+hash+"\""
+  c := Config {
+    Architecture: "amd64",
+    Os: "linux",
+    DockerVersion: "1.13.1",
+    Created: time.Now().Format("2006-01-02T15:04:00Z"),
+    Config: ConfigConfig {
+      Entrypoint: []string{"/hello"},
+      WorkingDir: "/",
+    },
+    Rootfs: ConfigRootFs {
+      Type: "layers",
+      DiffIds: []string{},
+    },
   }
-  c := fmt.Sprintf(configTemplate, tmp)
-  return []byte(c)
+  
+  for _, hash := range imagehash {
+    h := "sha256:"+hash
+    c.Rootfs.DiffIds = append(c.Rootfs.DiffIds, h)
+  }
+  o, _ := json.Marshal(c)
+  return o
 }
 
 func createmanifest(imagehash []string, confighash string) string {
